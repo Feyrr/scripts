@@ -1,0 +1,19 @@
+function handler(event) {
+
+    // Redirect from apex to subdomain (e.g. www).
+    var request = event.request;
+
+    if (request.headers.host) {
+        var host = request.headers.host.value;
+        if (host === 'example.com' || 'www.example.com') {
+            return {
+                statusCode: 301,
+                statusDescription: 'Moved Permanently',
+                headers: {
+                    'location': { "value": 'https://www.domainredirect.com' }
+                }
+            };
+        }
+    }
+    return event.request;
+}
