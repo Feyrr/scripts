@@ -1,0 +1,45 @@
+<IfModule Litespeed>
+# Block access to readme.html and readme.txt files
+RewriteCond %{REQUEST_URI} ^/readme\.html$ [NC,OR]
+RewriteCond %{REQUEST_URI} ^/readme\.txt$ [NC]
+RewriteRule .* - [F,L]
+
+# Block access to xmlrpc.php, phpinfo.php and wp-trackback.php files
+RewriteCond %{REQUEST_URI} ^/xmlrpc\.php$ [NC,OR]
+RewriteCond %{REQUEST_URI} ^/phpinfo\.php$ [NC,OR]
+RewriteCond %{REQUEST_URI} ^/wp-trackback\.php$ [NC]
+RewriteRule .* - [F,L]
+
+# Block access to license.txt and wp-config.php files
+RewriteCond %{REQUEST_URI} ^/license\.txt$ [NC,OR]
+RewriteCond %{REQUEST_URI} ^/wp-config\.php$ [NC]
+RewriteRule .* - [F,L]
+
+# Block access to wp-admin/includes directory
+RewriteRule ^/wp-admin/includes/ - [F,L]
+
+# Block access to all files in wp-includes directory, except for .js files
+RewriteCond %{REQUEST_URI} !^/wp-includes/.*\.js$ [NC]
+RewriteRule ^/wp-includes/ - [F,L]
+
+# Block access to all PHP files in wp-includes directory
+RewriteRule ^/wp-includes/.*\.php$ - [F,L]
+
+# Block access to PHP files in wp-includes/js/tinymce/langs directory
+RewriteRule ^/wp-includes/js/tinymce/langs/.+\.php$ - [F,L]
+
+# Block access to wp-includes/theme-compat directory
+RewriteRule ^/wp-includes/theme-compat/ - [F,L]
+
+# Block access to .git and .svn directories
+RewriteRule (^|.*/)\.(git|svn)/.* - [F,L]
+
+# Block access to PHP files in wp-content/uploads directory
+RewriteRule ^/wp-content/uploads/.*\.(?:php[1-7]?|pht|phtml?|phps)\.?$ [NC,F,L]
+
+# Block access to PHP files in wp-content/plugins directory
+RewriteRule ^/wp-content/plugins/.*\.(?:php[1-7]?|pht|phtml?|phps)\.?$ [NC,F,L]
+
+# Block access to PHP files in wp-content/themes directory
+RewriteRule ^/wp-content/themes/.*\.(?:php[1-7]?|pht|phtml?|phps)\.?$ [NC,F,L]
+</IfModule>
