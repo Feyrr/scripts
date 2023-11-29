@@ -1,0 +1,19 @@
+apt install curl jq glow
+
+curl -sS https://raw.githubusercontent.com/0xacx/chatGPT-shell-cli/main/install.sh | sudo -E bash
+
+Generate OpenAI secret API key
+
+export OPENAI_KEY=INSERT_API_KEY
+
+/usr/local/bin/chatgpt
+
+"Enter a prompt:"
+
+Test API key and connection to ChatGPT by entering simple prompt
+
+command: scan ports 1-1024 at 8.8.8.8 and get version information
+
+command: find exploits for vsftpd 2.3.4
+
+command: use the msfconsole vsftpd exploit at 8.8.8.8
