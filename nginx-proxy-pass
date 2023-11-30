@@ -1,0 +1,23 @@
+#change port number with the application port number
+server
+{
+	listen 80;
+	listen [::]:80;
+	server_name example.com;
+	location /
+	{
+		proxy_pass http://localhost:5000;
+		proxy_http_version 1.1;
+		proxy_set_header Upgrade $http_upgrade;
+		proxy_set_header Connection 'upgrade';
+		proxy_set_header Host $host;
+		proxy_cache_bypass $http_upgrade;
+	}
+}
+#if want to redirect, insert code below
+server
+{
+	listen 80;
+	server_name example.com;
+	return 301 https://$server_name$request_uri;
+}
