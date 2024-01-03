@@ -1,0 +1,12 @@
+<?php
+/**
+ * Plugin Name: Disable Admin Email Check
+ * Description: Disables the Site Admin Email Verification Screen using the admin_emai$
+ * Author: Ferrian
+ * Version: 1.0
+ * License:     GNU General Public License v3 or later
+ * License URI: http://www.gnu.org/licenses/gpl-3.0.html
+ */
+
+add_filter( 'admin_email_check_interval', '__return_false' );
+?>
