@@ -1,0 +1,200 @@
+// requirement: PHP8.1 FPM
+
+sudo su
+//Setup Hostname
+hostnamectl set-hostname subdomain.domain.tld
+
+## Basic
+sudo apt-get update && sudo apt-get -y upgrade && sudo apt-get autoremove -y && sudo apt-get install software-properties-common
+
+//Setup SWAP
+sudo fallocate -l 1G /swapfile;
+ls -lh /swapfile;
+sudo chmod 600 /swapfile;
+sudo mkswap /swapfile;
+sudo swapon /swapfile;
+nano /etc/fstab
+	/swapfile	swap	swap	defaults	0	0
+swapon --show
+
+//Install Dependence
+apt-get install -y software-properties-common nginx zip unzip mariadb-server python3-certbot-nginx php8.1-{apcu,bcmath,bz2,curl,fpm,intl,gd,mbstring,mysql,xml,zip}
+
+// Reboot Server
+sudo reboot
+
+sudo certbot --nginx -d subdomain.domain.tld --register-unsafely-without-email
+
+// Nginx Hardening (Optional)
+sudo openssl dhparam -dsaparam -out /etc/ssl/dhparam.pem 2048
+sudo wget -q https://gist.githubusercontent.com/amanjuman/8ee772b38bc1a14cecf30546d0e53b73/raw/696eb10ae462d0603290a4f23120592b0de4f669/nginx.conf -O /etc/nginx/nginx.conf
+sudo wget -q https://gist.githubusercontent.com/amanjuman/8ad9e374cb970a352d08b950e3d3dbef/raw/ddf53d463c80dfe76f7594b3bb3a58df63cd2aad/default -O /etc/nginx/sites-available/default
+// SSL Auto Renew
+sudo certbot renew --dry-run
+
+
+// PHP Tuning
+sudo sed -i 's/;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/g' /etc/php/8.1/fpm/php.ini
+sudo sed -i 's/max_execution_time = 30/max_execution_time = 120/g' /etc/php/8.1/fpm/php.ini
+sudo sed -i 's/memory_limit = 128M/memory_limit = 512M/g' /etc/php/8.1/fpm/php.ini
+sudo sed -i 's/post_max_size = 8M/post_max_size = 1024M/g' /etc/php/8.1/fpm/php.ini
+sudo sed -i 's/upload_max_filesize = 2M/upload_max_filesize = 512M/g' /etc/php/8.1/fpm/php.ini
+sudo sed -i 's/max_input_time = 60/max_input_time = 120/g' /etc/php/8.1/fpm/php.ini
+sudo sed -i 's/;max_input_vars = 1000/max_input_vars = 5000/g' /etc/php/8.1/fpm/php.ini
+sudo sed -i 's/short_open_tag = Off/short_open_tag = On/g' /etc/php/8.1/fpm/php.ini
+sudo sed -i 's/zlib.output_compression = Off/zlib.output_compression = On/g' /etc/php/8.1/fpm/php.ini
+sudo sed -i 's/;opcache.enable=1/opcache.enable=1/g' /etc/php/8.1/fpm/php.ini
+sudo sed -i 's/;opcache.save_comments=1/opcache.save_comments=1/g' /etc/php/8.1/fpm/php.ini
+sudo sed -i 's/;date.timezone.*/date.timezone = UTC/' /etc/php/8.1/fpm/php.ini
+
+// Restart PHP
+service php8.1-fpm restart
+
+//For MySQL Server
+sudo echo 'sql_mode = "STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION"' >> /etc/mysql/mysql.conf.d/mysqld.cnf
+//For MariaDB Server
+sudo echo 'sql_mode = "STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION"' >> /etc/mysql/mariadb.conf.d/50-server.cnf
+// Restart MySQL Service
+sudo service mysql restart
+
+//Create Database
+mysql -u root -p
+Enter Password:
+CREATE DATABASE sendydb;
+CREATE USER 'sendyuser'@'%' IDENTIFIED BY 'password';
+// MySQL 5.7
+GRANT ALL ON sendydb.* TO 'sendyuser'@'%' IDENTIFIED BY 'password' WITH GRANT OPTION;
+// MariaDB 10 Up
+GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, INDEX, ALTER, CREATE TEMPORARY TABLES, CREATE VIEW, EVENT, TRIGGER, SHOW VIEW, CREATE ROUTINE, ALTER ROUTINE, EXECUTE ON `sendydb`.* TO 'sendyuser'@'%';
+FLUSH PRIVILEGES;
+EXIT;
+
+cd /var/www/
+wget https://sendy.co/download/?license=LICENSE-KEY -O sendy.zip
+unzip sendy.zip && rm sendy.zip && mv sendy/ subdomain.domain.tld
+// For AWS
+chown ubuntu:www-data /var/www/subdomain.domain.tld/ -R
+// For Normal Linux
+chown root:www-data /var/www/subdomain.domain.tld/ -R
+chmod -R 775 /var/www/subdomain.domain.tld/
+chmod -R 0777 /var/www/subdomain.domain.tld/uploads/
+
+
+crontab -e
+*/5 * * * * php /var/www/subdomain.domain.tld/scheduled.php > /dev/null 2>&1
+*/1 * * * * php /var/www/subdomain.domain.tld/autoresponders.php > /dev/null 2>&1
+*/1 * * * * php /var/www/subdomain.domain.tld/import-csv.php > /dev/null 2>&1
+*/15 * * * * php /var/www/subdomain.domain.tld/update-segments.php > /dev/null 2>&1
+
+// Edit Sendy Config File and Put Database information.
+nano /var/www/subdomain.domain.tld/includes/config.php
+
+
+nano /etc/nginx/sites-available/subdomain.domain.tld.conf
+// You may use this settings if you have subdomain as Sendy
+
+server
+{
+	# Listen
+	listen 80;
+	listen [::]:80;
+	listen 443 ssl http2;
+	listen [::]:443 ssl http2;
+
+	# Directory & Server Naming
+	server_name subdomain.domain.tld;
+	root /var/www/subdomain.domain.tld;
+
+	# Index
+	index index.php;
+	autoindex off;
+	add_header  X-Robots-Tag "noindex, nofollow, nosnippet, noarchive";
+
+	# SSL
+	ssl_certificate /etc/letsencrypt/live/subdomain.domain.tld/fullchain.pem;
+	ssl_certificate_key /etc/letsencrypt/live/subdomain.domain.tld/privkey.pem;
+
+	# HTTP to HTTPS redirection
+	if ($scheme != "https")
+	{
+		return 301 https://$host$request_uri;
+	}
+
+	# PHP Upsteam
+	location ~ \.php$ 
+	{
+		try_files $uri =404;
+		include fastcgi_params;
+		fastcgi_index index.php;
+		fastcgi_split_path_info ^(.+\.php)(/.+)$;
+		fastcgi_pass unix:/run/php/php8.1-fpm.sock;
+		fastcgi_param SCRIPT_FILENAME $document_root/$fastcgi_script_name;
+	}
+
+	# Permalink
+	location /
+	{
+		try_files $uri $uri/ $uri.html $uri.php$is_args$query_string;
+	}
+
+	location /l/
+	{
+		rewrite ^/l/([a-zA-Z0-9/]+)$ /l.php?i=$1 last;
+	}
+
+	location /t/
+	{
+		rewrite ^/t/([a-zA-Z0-9/]+)$ /t.php?i=$1 last;
+	}
+
+	location /w/
+	{
+		rewrite ^/w/([a-zA-Z0-9/]+)$ /w.php?i=$1 last;
+	}
+
+	location /unsubscribe/ 
+	{
+		rewrite ^/unsubscribe/(.*)$ /unsubscribe.php?i=$1 last;
+	}
+
+	location /subscribe/ 
+	{
+		rewrite ^/subscribe/(.*)$ /subscribe.php?i=$1 last;
+	}
+
+	location /confirm/ 
+	{
+		rewrite ^/confirm/(.*)$ /confirm.php?i=$1 last;
+	}
+
+	# Static Assests
+	location ~* ^.+.(ogg|ogv|svg|svgz|eot|otf|woff|mp4|ttf|rss|atom|jpg|jpeg|gif|png|ico|zip|tgz|gz|rar|bz2|doc|xls|exe|ppt|tar|mid|midi|wav|bmp|rtf|css|js|xml)$ 
+	{
+		access_log off;
+		log_not_found off;
+		expires off;
+	}
+
+	# Disable Hidden FIle Access Except Lets Encrypt Verification
+	location ~ /\.well-known 
+	{
+		access_log off;
+		log_not_found off;
+		allow all;
+	}
+
+	# Logs
+	access_log /var/log/nginx/subdomain.domain.tld-access.log;
+	error_log /var/log/nginx/subdomain.domain.tld-error.log warn;
+}
+
+
+ln -s /etc/nginx/sites-available/subdomain.domain.tld.conf /etc/nginx/sites-enabled/
+
+## Sendy Upgrade
+cd /opt/ && rm -rf sendy/ && wget https://sendy.co/download/?license=LICENSE-KEY -O sendy.zip && unzip sendy.zip && rm sendy.zip
+cd /opt/sendy/ && rm -rf .htaccess includes/config.php
+rsync -ar --progress /opt/sendy/ /var/www/subdomain.domain.tld/
+sudo chown www-data:www-data /var/www/subdomain.domain.tld/ -R
+
+source: https://gist.github.com/amanjuman/8fede1b1fa20a72ad38c82fba5b5aba1
