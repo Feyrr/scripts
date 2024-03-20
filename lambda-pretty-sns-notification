@@ -1,0 +1,21 @@
+#!/usr/bin/env python
+
+from __future__ import print_function
+import boto3
+print('Loading function')
+
+#set region
+REGION = 'us-west-2'
+#set the SNS topic ARN you want to alert on
+SNS_TOPIC_ARN = 'arn:aws:sns:REGION:ACCOUNT_ID:TOPIC_NAME'
+
+def lambda_handler(event, context):
+    sns_body = 'Instance {} has changed to {} state at {} UTC'.format(event['detail']['instance-id'], event['detail']['state'], event['time'])
+    client = boto3.client('sns', region_name=REGION)
+    response = client.publish(
+        TopicArn=SNS_TOPIC_ARN,
+        Subject='Instance state change notification',
+        Message=sns_body
+    )
+
+# source: https://gist.github.com/danlindow/719f1c3070fc9718e521d474079b9f34
