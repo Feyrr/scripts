@@ -1,0 +1,10 @@
+# Delete all branches except master locally
+git branch | grep -v 'master' | xargs git branch -D
+
+# Delete all branches except master remotely
+git push origin --delete $(git branch -r | grep -v 'origin/master' | sed 's/origin\///')
+
+# Push changes to remote repository
+git push origin --prune
+
+# source: https://stackoverflow.com/questions/54808390/how-to-delete-all-git-remote-branches-except-master
