@@ -1,0 +1,21 @@
+# This apache config is used to serve ads.txt if the project code hide/disallow extension such as .php
+
+Alias /ads.txt /usr/share/ads/ads.txt
+
+<Directory /usr/share/ads>
+   # Allow serving files
+   Options FollowSymLinks
+
+   # Disable directory listing
+   Options -Indexes
+
+   # Disable the addition of trailing slash
+   DirectorySlash Off
+
+   # Add default charset
+   AddDefaultCharset UTF-8
+
+   <Files "ads.txt">
+       Require all granted
+   </Files>
+</Directory>
